@@ -1,0 +1,562 @@
+<title>BikeDeals — System Design Plan</title>
+<style>
+  :root {
+    --bg: #f5f2ec;
+    --bg-panel: #ffffff;
+    --bg-sunken: #ece7dc;
+    --text: #1b1d21;
+    --text-muted: #6b675d;
+    --rule: #dcd5c6;
+    --accent: #c1541a;
+    --accent-soft: #f0dcc8;
+    --scope: #1f7a6c;
+    --scope-soft: #dcece7;
+    --mono-bg: #1b1d21;
+    --mono-text: #ece8df;
+    --shadow: 0 1px 2px rgba(27,29,33,0.06), 0 8px 24px rgba(27,29,33,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a;
+      --bg-panel: #1c1f23;
+      --bg-sunken: #101214;
+      --text: #ece8df;
+      --text-muted: #9a968a;
+      --rule: #33363b;
+      --accent: #e2793f;
+      --accent-soft: #3a2a1c;
+      --scope: #4fb3a2;
+      --scope-soft: #16302c;
+      --mono-bg: #0e0f11;
+      --mono-text: #d9d5c9;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a;
+    --bg-panel: #1c1f23;
+    --bg-sunken: #101214;
+    --text: #ece8df;
+    --text-muted: #9a968a;
+    --rule: #33363b;
+    --accent: #e2793f;
+    --accent-soft: #3a2a1c;
+    --scope: #4fb3a2;
+    --scope-soft: #16302c;
+    --mono-bg: #0e0f11;
+    --mono-text: #d9d5c9;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f2ec;
+    --bg-panel: #ffffff;
+    --bg-sunken: #ece7dc;
+    --text: #1b1d21;
+    --text-muted: #6b675d;
+    --rule: #dcd5c6;
+    --accent: #c1541a;
+    --accent-soft: #f0dcc8;
+    --scope: #1f7a6c;
+    --scope-soft: #dcece7;
+    --mono-bg: #1b1d21;
+    --mono-text: #ece8df;
+    --shadow: 0 1px 2px rgba(27,29,33,0.06), 0 8px 24px rgba(27,29,33,0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, .display {
+    font-family: Bahnschrift, "DIN Alternate", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+  }
+
+  code, .mono, .yaml, .filetree {
+    font-family: "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+
+  a { color: var(--accent); }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 68ch);
+    gap: 4rem;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; gap: 1.5rem; padding: 0 1.25rem; }
+    nav.rail { position: static !important; order: -1; }
+  }
+
+  /* ---- cover / title block ---- */
+  .cover {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 3.5rem 2rem 2.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 880px) { .cover { padding: 2.25rem 1.25rem 1.75rem; } }
+
+  .plate {
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .plate span b { color: var(--text); font-weight: 600; }
+
+  .cover h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    margin: 0 0 0.4rem;
+    line-height: 1.02;
+  }
+  .cover .sub {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  .status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.78rem;
+    padding: 0.3em 0.75em;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+  }
+  .chip.done { border-color: color-mix(in srgb, var(--scope) 45%, var(--rule)); color: var(--scope); background: var(--scope-soft); }
+  .chip.pending { border-color: color-mix(in srgb, var(--accent) 45%, var(--rule)); color: var(--accent); background: var(--accent-soft); }
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* ---- nav rail ---- */
+  nav.rail {
+    position: sticky;
+    top: 2.5rem;
+    padding-top: 3rem;
+    font-size: 0.85rem;
+  }
+  nav.rail .label {
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.9rem;
+  }
+  nav.rail ol { list-style: none; margin: 0; padding: 0; counter-reset: sec; }
+  nav.rail li { counter-increment: sec; margin-bottom: 0.55rem; }
+  nav.rail li a {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: flex;
+    gap: 0.6em;
+  }
+  nav.rail li a::before {
+    content: counter(sec, decimal-leading-zero);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    color: var(--rule);
+    font-size: 0.75rem;
+    padding-top: 0.1em;
+  }
+  nav.rail li a:hover { color: var(--accent); }
+
+  /* ---- main content ---- */
+  main { padding-top: 3rem; padding-bottom: 6rem; min-width: 0; }
+
+  section { margin-bottom: 3.25rem; scroll-margin-top: 2rem; }
+  section h2 {
+    font-size: 1.5rem;
+    margin: 0 0 0.3rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  section h2 .num {
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  section .dek {
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+    max-width: 60ch;
+  }
+  section h3 {
+    font-size: 1.02rem;
+    margin: 1.6rem 0 0.6rem;
+  }
+  p { margin: 0 0 1rem; }
+  ul.tight, ol.tight { padding-left: 1.2rem; margin: 0 0 1rem; }
+  ul.tight li, ol.tight li { margin-bottom: 0.4rem; }
+
+  .rule { border: none; border-top: 1px solid var(--rule); margin: 0 0 3.25rem; }
+
+  /* ---- panels / code ---- */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin: 0 0 1.25rem;
+  }
+  .panel .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg-sunken);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .panel pre {
+    margin: 0;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    background: var(--mono-bg);
+    color: var(--mono-text);
+  }
+  .yaml .k { color: #7cc9ff; }
+  .yaml .s { color: #f2c9a1; }
+  .yaml .c { color: #7d8590; font-style: italic; }
+  .yaml .n { color: #d9a0e8; }
+
+  /* ---- source cards ---- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem; }
+  .card {
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    box-shadow: var(--shadow);
+  }
+  .card .name { font-weight: 700; margin-bottom: 0.3rem; }
+  .card .note { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+  .card .tag {
+    display: inline-block;
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--scope);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ---- pipeline schematic ---- */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.5rem;
+  }
+  .stage {
+    flex: 0 0 auto;
+    min-width: 118px;
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    border-radius: 6px;
+    padding: 0.75rem 0.8rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .stage .t { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.2rem; }
+  .stage .d { font-size: 0.72rem; color: var(--text-muted); }
+  .arrow {
+    flex: 0 0 auto;
+    width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--rule);
+    font-size: 1.1rem;
+  }
+
+  /* ---- scoring chips ---- */
+  .buckets { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.25rem; }
+  .bucket {
+    border-radius: 5px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .bucket.great { background: var(--scope-soft); color: var(--scope); border-color: color-mix(in srgb, var(--scope) 35%, transparent); }
+  .bucket.good  { background: color-mix(in srgb, var(--scope) 12%, var(--bg-panel)); color: var(--text); border-color: var(--rule); }
+  .bucket.fair  { background: var(--bg-sunken); color: var(--text-muted); border-color: var(--rule); }
+  .bucket.over  { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+  /* ---- file tree ---- */
+  .filetree {
+    font-size: 0.82rem;
+    line-height: 1.7;
+    white-space: pre;
+    color: var(--mono-text);
+    background: var(--mono-bg);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .filetree .comment { color: #7d8590; }
+
+  /* ---- decision list ---- */
+  .decisions { list-style: none; margin: 0 0 1.25rem; padding: 0; }
+  .decisions li {
+    display: grid;
+    grid-template-columns: 1.4rem 1fr;
+    gap: 0.6rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li:last-child { border-bottom: none; }
+  .decisions .mark { color: var(--scope); font-weight: 700; }
+  .decisions .txt b { display: block; }
+  .decisions .txt span { color: var(--text-muted); font-size: 0.88rem; }
+
+  .todo { list-style: none; margin: 0; padding: 0; }
+  .todo li {
+    display: grid;
+    grid-template-columns: 1.1rem 1fr;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .todo li:last-child { border-bottom: none; }
+  .todo .box { width: 0.9rem; height: 0.9rem; border: 1.5px solid var(--rule); border-radius: 2px; margin-top: 0.2rem; }
+
+  footer.colophon {
+    max-width: 68ch;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.25rem;
+  }
+
+  ::selection { background: var(--accent-soft); }
+</style>
+
+<div class="cover">
+  <div class="plate">
+    <span>Doc <b>DESIGN&nbsp;PLAN</b></span>
+    <span>Project <b>BikeDeals</b></span>
+    <span>Rev <b>0.3</b></span>
+    <span>Status <b>Awaiting design review — nothing built yet</b></span>
+  </div>
+  <h1>Marketplace watch system</h1>
+  <p class="sub">A daily bot that scrapes Portuguese classifieds for any motorcycle you're watching, scores what it finds against its own current market, and surfaces it on a dashboard — so you never have to search yourself.</p>
+  <div class="status-row">
+    <span class="chip done"><span class="dot"></span>Watchlist generalized to any bike</span>
+    <span class="chip done"><span class="dot"></span>Repo will be public (free Pages)</span>
+    <span class="chip done"><span class="dot"></span>gh CLI installed &amp; authenticated</span>
+    <span class="chip done"><span class="dot"></span>Python 3.12 installed</span>
+    <span class="chip done"><span class="dot"></span>Repo name chosen: moto-hunter</span>
+    <span class="chip pending"><span class="dot"></span>Repo not yet created — holding for your go-ahead</span>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="rail">
+    <div class="label">Contents</div>
+    <ol>
+      <li><a href="#watchlist">Watchlist</a></li>
+      <li><a href="#sources">Sources</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#data-model">Data model</a></li>
+      <li><a href="#scoring">Scoring</a></li>
+      <li><a href="#hosting">Scheduling &amp; hosting</a></li>
+      <li><a href="#notifications">Notifications</a></li>
+      <li><a href="#etiquette">Scraping etiquette</a></li>
+      <li><a href="#setup">Remaining setup</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="watchlist">
+      <h2><span class="num">§1</span> Watchlist — any bike, not just the MT-07</h2>
+      <p class="dek">One config file drives the whole system. Each entry is a bike search plus optional filters — adding a new bike later is an edit, not a code change.</p>
+      <div class="panel">
+        <div class="panel-head"><span>config.yaml</span><span>watchlist definition</span></div>
+        <pre class="yaml"><span class="k">watches</span>:
+  - <span class="k">name</span>: <span class="s">"MT-07"</span>
+    <span class="k">query</span>: <span class="s">"yamaha mt-07"</span>
+    <span class="k">aliases</span>: [<span class="s">"mt07"</span>, <span class="s">"mt 07"</span>]  <span class="c"># catches inconsistent titles</span>
+    <span class="k">max_price</span>: <span class="n">null</span>     <span class="c"># e.g. 6000 — null means no filter</span>
+    <span class="k">min_year</span>: <span class="n">null</span>     <span class="c"># e.g. 2018</span>
+    <span class="k">max_km</span>: <span class="n">null</span>       <span class="c"># e.g. 30000</span>
+    <span class="k">location</span>: <span class="n">null</span>     <span class="c"># e.g. "Porto" — modifiable per watch, not hardcoded</span>
+
+  - <span class="k">name</span>: <span class="s">"Honda CB500F"</span>
+    <span class="k">query</span>: <span class="s">"honda cb500f"</span>
+    <span class="k">location</span>: <span class="s">"Lisboa"</span></pre>
+      </div>
+      <p>Filters narrow what counts as a <em>match</em> in your digest/dashboard. Listings that fail a filter are still stored, so they remain useful market context for scoring the ones that pass. <code>location</code> is a config field like any other — leave it unset to search nationwide, or set it per watch.</p>
+    </section>
+
+    <section id="sources">
+      <h2><span class="num">§2</span> Sources — Portugal</h2>
+      <p class="dek">Each marketplace gets its own scraper behind one common interface: <code>fetch(query) → list[Listing]</code>. A fourth site later is an isolated addition.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="tag">Primary</div>
+          <div class="name">Standvirtual.pt</div>
+          <p class="note">Largest PT marketplace. Listing data is often embedded as structured JSON — more reliable to parse than raw HTML.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Primary</div>
+          <div class="name">OLX.pt</div>
+          <p class="note">Large general classifieds site with strong motorcycle presence.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Secondary</div>
+          <div class="name">CustoJusto.pt</div>
+          <p class="note">Smaller reach, but occasionally surfaces listings the other two miss.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2><span class="num">§3</span> Architecture</h2>
+      <p class="dek">One pipeline, run once a day, per watch in the list.</p>
+      <div class="pipeline">
+        <div class="stage"><div class="t">Scrapers</div><div class="d">3 sites × N watches</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">SQLite</div><div class="d">history + dedup</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">Scoring</div><div class="d">per-watch percentile</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">Dashboard</div><div class="d">static HTML render</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">GitHub Pages</div><div class="d">published site</div></div>
+      </div>
+      <h3>Repository layout</h3>
+      <div class="filetree">BikeDeals/
+  .github/workflows/daily.yml   <span class="comment"># cron trigger, runs the whole pipeline</span>
+  scrapers/
+    base.py                     <span class="comment"># common interface: fetch(query) -> list[Listing]</span>
+    standvirtual.py
+    olx.py
+    custojusto.py
+  bikedeals/
+    models.py                   <span class="comment"># Listing dataclass (price, year, km, url, watch, ...)</span>
+    db.py                       <span class="comment"># SQLite: every listing ever seen, price history</span>
+    scoring.py                  <span class="comment"># ranks each active listing vs. its own watch's market</span>
+    notify.py                   <span class="comment"># (future) email digest</span>
+    dashboard.py                <span class="comment"># renders the static HTML dashboard</span>
+    main.py                     <span class="comment"># scrape -&gt; store -&gt; score -&gt; render</span>
+  templates/dashboard.html.j2
+  docs/                         <span class="comment"># generated dashboard, served by GitHub Pages</span>
+  data/listings.db              <span class="comment"># committed SQLite DB, persists state between runs</span>
+  config.yaml
+  requirements.txt</div>
+    </section>
+
+    <section id="data-model">
+      <h2><span class="num">§4</span> Data model</h2>
+      <p class="dek">Every listing, from every site, is normalized to the same record before it touches the database.</p>
+      <ul class="tight">
+        <li><code>watch_name</code>, <code>source</code>, external id — identity &amp; dedup key</li>
+        <li><code>title</code>, <code>price</code>, <code>year</code>, <code>km</code>, <code>location</code>, <code>url</code>, <code>image_url</code></li>
+        <li><code>first_seen</code>, <code>last_seen</code>, <code>is_active</code> — lifecycle tracking</li>
+        <li><code>price_history</code> — every price change, timestamped, to catch reductions</li>
+      </ul>
+    </section>
+
+    <section id="scoring">
+      <h2><span class="num">§5</span> Scoring — self-calibrating, no thresholds to tune</h2>
+      <p class="dek">Every listing is ranked only against other active listings <em>for that same watch</em> — an MT-07 is never compared against a CB500F.</p>
+      <ul class="tight">
+        <li>Price percentile within the watch's currently active pool, loosely adjusted for year/km outliers</li>
+        <li>Year and mileage as secondary factors</li>
+        <li>Price-drop detection — a reduced price is a strong signal independent of percentile</li>
+      </ul>
+      <div class="buckets">
+        <span class="bucket great">Great deal</span>
+        <span class="bucket good">Good</span>
+        <span class="bucket fair">Fair</span>
+        <span class="bucket over">Overpriced</span>
+      </div>
+      <p>Config filters decide what counts as a <em>match</em>; scoring decides how good each match <em>is</em> — the two operate independently, per watch.</p>
+    </section>
+
+    <section id="hosting">
+      <h2><span class="num">§6</span> Scheduling &amp; hosting</h2>
+      <p class="dek">GitHub Actions runs the pipeline daily; GitHub Pages serves the result.</p>
+      <ul class="tight">
+        <li>Daily cron (e.g. 07:00 UTC): checkout → set up Python → install deps → run <code>bikedeals/main.py</code> → commit <code>data/listings.db</code> and <code>docs/</code> → push</li>
+        <li>Repo is <strong>public</strong> — required for free GitHub Pages hosting. No sensitive data is stored: just public listing links and prices, no secrets, no email addresses</li>
+        <li>Dashboard will live at <code>https://&lt;username&gt;.github.io/BikeDeals/</code></li>
+      </ul>
+    </section>
+
+    <section id="notifications">
+      <h2><span class="num">§7</span> Notifications</h2>
+      <p class="dek">Out of scope for v1, by request — dashboard is the interface for now.</p>
+      <p><code>notify.py</code> is stubbed into the architecture on purpose, so email (or Telegram, etc.) slots in later without restructuring anything upstream of it.</p>
+    </section>
+
+    <section id="etiquette">
+      <h2><span class="num">§8</span> Scraping etiquette</h2>
+      <p class="dek">Low, predictable load: a handful of searches, once a day, with realistic delays and a normal user-agent. Personal-use monitoring of public listing pages, not bulk harvesting.</p>
+    </section>
+
+    <section id="setup">
+      <h2><span class="num">§9</span> Remaining setup</h2>
+      <p class="dek">Resolved so far, and what's still open before the first commit.</p>
+      <ul class="decisions">
+        <li><span class="mark">✓</span><span class="txt"><b>Region &amp; sources</b><span>Portugal — Standvirtual, OLX, CustoJusto</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Watchlist</b><span>Config-driven, any bike, optional price/year/km filters</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Notifications</b><span>Skipped for v1 — dashboard only</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Repo visibility</b><span>Public, for free GitHub Pages</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>gh auth</b><span>Device flow complete — logged in as alocardoso-CSW</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Repo name</b><span>moto-hunter, under alocardoso-CSW</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Location filter</b><span>Per-watch config field, not hardcoded or nationwide-only</span></span></li>
+      </ul>
+      <h3>Still open</h3>
+      <ul class="todo">
+        <li><span class="box"></span><span>Your review of this design — <strong>nothing is being built until you sign off</strong></span></li>
+        <li><span class="box"></span><span>Repo <code>moto-hunter</code> has not been created yet</span></li>
+      </ul>
+    </section>
+
+    <footer class="colophon">
+      BikeDeals — internal design plan, rev 0.3. Generated as a working reference; the source of truth for build decisions is the running conversation and <code>DESIGN.md</code> in the project root.
+    </footer>
+  </main>
+</div>

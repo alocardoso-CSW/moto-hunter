@@ -1,0 +1,750 @@
+<title>BikeDeals — System Design Plan</title>
+<style>
+  :root {
+    --bg: #f5f2ec;
+    --bg-panel: #ffffff;
+    --bg-sunken: #ece7dc;
+    --text: #1b1d21;
+    --text-muted: #6b675d;
+    --rule: #dcd5c6;
+    --accent: #c1541a;
+    --accent-soft: #f0dcc8;
+    --scope: #1f7a6c;
+    --scope-soft: #dcece7;
+    --warn: #a3391f;
+    --warn-soft: #f3ded7;
+    --mono-bg: #1b1d21;
+    --mono-text: #ece8df;
+    --shadow: 0 1px 2px rgba(27,29,33,0.06), 0 8px 24px rgba(27,29,33,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a;
+      --bg-panel: #1c1f23;
+      --bg-sunken: #101214;
+      --text: #ece8df;
+      --text-muted: #9a968a;
+      --rule: #33363b;
+      --accent: #e2793f;
+      --accent-soft: #3a2a1c;
+      --scope: #4fb3a2;
+      --scope-soft: #16302c;
+      --warn: #e2793f;
+      --warn-soft: #3a231c;
+      --mono-bg: #0e0f11;
+      --mono-text: #d9d5c9;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a;
+    --bg-panel: #1c1f23;
+    --bg-sunken: #101214;
+    --text: #ece8df;
+    --text-muted: #9a968a;
+    --rule: #33363b;
+    --accent: #e2793f;
+    --accent-soft: #3a2a1c;
+    --scope: #4fb3a2;
+    --scope-soft: #16302c;
+    --warn: #e2793f;
+    --warn-soft: #3a231c;
+    --mono-bg: #0e0f11;
+    --mono-text: #d9d5c9;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f2ec;
+    --bg-panel: #ffffff;
+    --bg-sunken: #ece7dc;
+    --text: #1b1d21;
+    --text-muted: #6b675d;
+    --rule: #dcd5c6;
+    --accent: #c1541a;
+    --accent-soft: #f0dcc8;
+    --scope: #1f7a6c;
+    --scope-soft: #dcece7;
+    --warn: #a3391f;
+    --warn-soft: #f3ded7;
+    --mono-bg: #1b1d21;
+    --mono-text: #ece8df;
+    --shadow: 0 1px 2px rgba(27,29,33,0.06), 0 8px 24px rgba(27,29,33,0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, .display {
+    font-family: Bahnschrift, "DIN Alternate", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+  }
+
+  code, .mono, .yaml, .filetree {
+    font-family: "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+
+  a { color: var(--accent); }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 68ch);
+    gap: 4rem;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; gap: 1.5rem; padding: 0 1.25rem; }
+    nav.rail { position: static !important; order: -1; }
+  }
+
+  /* ---- cover / title block ---- */
+  .cover {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 3.5rem 2rem 2.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 880px) { .cover { padding: 2.25rem 1.25rem 1.75rem; } }
+
+  .plate {
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .plate span b { color: var(--text); font-weight: 600; }
+
+  .cover h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    margin: 0 0 0.4rem;
+    line-height: 1.02;
+  }
+  .cover .sub {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  .status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.78rem;
+    padding: 0.3em 0.75em;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+  }
+  .chip.done { border-color: color-mix(in srgb, var(--scope) 45%, var(--rule)); color: var(--scope); background: var(--scope-soft); }
+  .chip.pending { border-color: color-mix(in srgb, var(--accent) 45%, var(--rule)); color: var(--accent); background: var(--accent-soft); }
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* ---- nav rail ---- */
+  nav.rail {
+    position: sticky;
+    top: 2.5rem;
+    padding-top: 3rem;
+    font-size: 0.85rem;
+  }
+  nav.rail .label {
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.9rem;
+  }
+  nav.rail ol { list-style: none; margin: 0; padding: 0; counter-reset: sec; }
+  nav.rail li { counter-increment: sec; margin-bottom: 0.55rem; }
+  nav.rail li a {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: flex;
+    gap: 0.6em;
+  }
+  nav.rail li a::before {
+    content: counter(sec, decimal-leading-zero);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    color: var(--rule);
+    font-size: 0.75rem;
+    padding-top: 0.1em;
+  }
+  nav.rail li a:hover { color: var(--accent); }
+
+  /* ---- main content ---- */
+  main { padding-top: 3rem; padding-bottom: 6rem; min-width: 0; }
+
+  section { margin-bottom: 3.25rem; scroll-margin-top: 2rem; }
+  section h2 {
+    font-size: 1.5rem;
+    margin: 0 0 0.3rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  section h2 .num {
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  section .dek {
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+    max-width: 60ch;
+  }
+  section h3 {
+    font-size: 1.02rem;
+    margin: 1.6rem 0 0.6rem;
+  }
+  p { margin: 0 0 1rem; }
+  ul.tight, ol.tight { padding-left: 1.2rem; margin: 0 0 1rem; }
+  ul.tight li, ol.tight li { margin-bottom: 0.4rem; }
+
+  .rule { border: none; border-top: 1px solid var(--rule); margin: 0 0 3.25rem; }
+
+  /* ---- panels / code ---- */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin: 0 0 1.25rem;
+  }
+  .panel .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg-sunken);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .panel pre {
+    margin: 0;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    background: var(--mono-bg);
+    color: var(--mono-text);
+  }
+  .yaml .k { color: #7cc9ff; }
+  .yaml .s { color: #f2c9a1; }
+  .yaml .c { color: #7d8590; font-style: italic; }
+  .yaml .n { color: #d9a0e8; }
+
+  /* ---- source cards ---- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem; }
+  .card {
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    box-shadow: var(--shadow);
+  }
+  .card.risk { border-color: color-mix(in srgb, var(--warn) 40%, var(--rule)); }
+  .card .name { font-weight: 700; margin-bottom: 0.3rem; }
+  .card .note { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+  .card .tag {
+    display: inline-block;
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--scope);
+    margin-bottom: 0.5rem;
+  }
+  .card .tag.warn { color: var(--warn); }
+
+  /* ---- pipeline schematic ---- */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.5rem;
+  }
+  .stage {
+    flex: 0 0 auto;
+    min-width: 118px;
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    border-radius: 6px;
+    padding: 0.75rem 0.8rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .stage .t { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.2rem; }
+  .stage .d { font-size: 0.72rem; color: var(--text-muted); }
+  .arrow {
+    flex: 0 0 auto;
+    width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--rule);
+    font-size: 1.1rem;
+  }
+
+  /* ---- scoring chips ---- */
+  .buckets { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.25rem; }
+  .bucket {
+    border-radius: 5px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .bucket.great { background: var(--scope-soft); color: var(--scope); border-color: color-mix(in srgb, var(--scope) 35%, transparent); }
+  .bucket.good  { background: color-mix(in srgb, var(--scope) 12%, var(--bg-panel)); color: var(--text); border-color: var(--rule); }
+  .bucket.fair  { background: var(--bg-sunken); color: var(--text-muted); border-color: var(--rule); }
+  .bucket.over  { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+  /* ---- file tree ---- */
+  .filetree {
+    font-size: 0.82rem;
+    line-height: 1.7;
+    white-space: pre;
+    color: var(--mono-text);
+    background: var(--mono-bg);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .filetree .comment { color: #7d8590; }
+
+  /* ---- decision list ---- */
+  .decisions { list-style: none; margin: 0 0 1.25rem; padding: 0; }
+  .decisions li {
+    display: grid;
+    grid-template-columns: 1.4rem 1fr;
+    gap: 0.6rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li:last-child { border-bottom: none; }
+  .decisions .mark { color: var(--scope); font-weight: 700; }
+  .decisions .txt b { display: block; }
+  .decisions .txt span { color: var(--text-muted); font-size: 0.88rem; }
+
+  .todo { list-style: none; margin: 0; padding: 0; }
+  .todo li {
+    display: grid;
+    grid-template-columns: 1.1rem 1fr;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .todo li:last-child { border-bottom: none; }
+  .todo .box { width: 0.9rem; height: 0.9rem; border: 1.5px solid var(--rule); border-radius: 2px; margin-top: 0.2rem; }
+
+  /* ---- UI mockup: add-watch form ---- */
+  .mockup {
+    border: 1px solid var(--rule);
+    background: var(--bg-panel);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin: 0 0 1.25rem;
+    overflow: hidden;
+  }
+  .mockup .mockup-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    background: var(--bg-sunken);
+    border-bottom: 1px solid var(--rule);
+    font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .mockup .mockup-bar .dots { display: flex; gap: 0.3rem; margin-right: 0.4rem; }
+  .mockup .mockup-bar .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); display: block; }
+  .mockup-body { padding: 1.25rem 1.4rem; }
+  .mockup h4 {
+    font-family: Bahnschrift, "DIN Alternate", "Arial Narrow", sans-serif;
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 0.9rem 1rem;
+  }
+  .field-grid .field.full { grid-column: 1 / -1; }
+  .field label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+  .field .range-pair { display: flex; align-items: center; gap: 0.5rem; }
+  .field .range-pair span { color: var(--text-muted); font-size: 0.8rem; }
+  .field input, .field select {
+    width: 100%;
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .mockup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+  .btn {
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 1.1rem;
+    border-radius: 5px;
+    border: 1px solid var(--rule);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---- watch table ---- */
+  .table-wrap { overflow-x: auto; margin: 0 0 1.25rem; }
+  table.watches {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.watches th, table.watches td {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  table.watches thead th {
+    background: var(--bg-sunken);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  table.watches tbody tr:last-child td { border-bottom: none; }
+  table.watches td.actions a { color: var(--accent); text-decoration: none; margin-right: 0.75rem; font-size: 0.8rem; }
+  .src-pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    padding: 0.15em 0.5em;
+    border-radius: 3px;
+    background: var(--scope-soft);
+    color: var(--scope);
+    margin: 0 0.15em 0.15em 0;
+  }
+  .run-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-size: 0.68rem;
+    padding: 0.2em 0.6em;
+    border-radius: 3px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  footer.colophon {
+    max-width: 68ch;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.25rem;
+  }
+
+  ::selection { background: var(--accent-soft); }
+</style>
+
+<div class="cover">
+  <div class="plate">
+    <span>Doc <b>DESIGN&nbsp;PLAN</b></span>
+    <span>Project <b>moto-hunter</b></span>
+    <span>Rev <b>0.5</b></span>
+    <span>Status <b>Awaiting design review — nothing built yet</b></span>
+  </div>
+  <h1>Marketplace watch platform</h1>
+  <p class="sub">A web app that watches Portuguese classifieds for any motorcycle you configure through its UI. You decide when it runs — click "Run now" and it scrapes, scores, and updates the dashboard on the spot.</p>
+  <div class="status-row">
+    <span class="chip done"><span class="dot"></span>Filters: brand, model, price/year/km min–max</span>
+    <span class="chip done"><span class="dot"></span>Sources: + Auto.pt, + Facebook Marketplace (flagged)</span>
+    <span class="chip done"><span class="dot"></span>Pivot: config.yaml → real UI-driven platform</span>
+    <span class="chip done"><span class="dot"></span>Manual trigger only — no daily auto-run, no scheduler</span>
+    <span class="chip done"><span class="dot"></span>No GitHub Pages needed — dashboard is served by the app itself</span>
+    <span class="chip pending"><span class="dot"></span>Hosting choice still open — now simpler, see §7</span>
+    <span class="chip pending"><span class="dot"></span>Repo not yet created — holding for your go-ahead</span>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="rail">
+    <div class="label">Contents</div>
+    <ol>
+      <li><a href="#platform">The platform</a></li>
+      <li><a href="#filters">Filters</a></li>
+      <li><a href="#sources">Sources</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#data-model">Data model</a></li>
+      <li><a href="#scoring">Scoring</a></li>
+      <li><a href="#hosting">Hosting</a></li>
+      <li><a href="#notifications">Notifications</a></li>
+      <li><a href="#etiquette">Scraping etiquette</a></li>
+      <li><a href="#setup">Remaining setup</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="platform">
+      <h2><span class="num">§1</span> The platform, not a config file</h2>
+      <p class="dek">You add and edit watches through a real UI, and you decide when it runs — no YAML, no daily schedule to babysit, no repo access needed day-to-day.</p>
+      <div class="mockup">
+        <div class="mockup-bar"><span class="dots"><i></i><i></i><i></i></span> moto-hunter — Add watch</div>
+        <div class="mockup-body">
+          <h4>New watch</h4>
+          <div class="field-grid">
+            <div class="field"><label>Brand</label><input value="Yamaha" readonly></div>
+            <div class="field"><label>Model</label><input value="MT-07" readonly></div>
+            <div class="field"><label>Price (€)</label><div class="range-pair"><input value="4500" readonly><span>–</span><input value="7000" readonly></div></div>
+            <div class="field"><label>Year</label><div class="range-pair"><input value="2018" readonly><span>–</span><input value="2024" readonly></div></div>
+            <div class="field"><label>Km</label><div class="range-pair"><input value="0" readonly><span>–</span><input value="30000" readonly></div></div>
+            <div class="field"><label>Location</label><input value="Porto (optional)" readonly></div>
+          </div>
+          <div class="mockup-actions">
+            <span class="btn">Cancel</span>
+            <span class="btn primary">Save watch</span>
+          </div>
+        </div>
+      </div>
+      <p>Every saved watch shows up in a table you can edit, delete, or run on demand:</p>
+      <div class="table-wrap">
+        <table class="watches">
+          <thead><tr><th>Brand</th><th>Model</th><th>Price</th><th>Year</th><th>Km</th><th>Location</th><th>Sources</th><th>Last run</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Yamaha</td><td>MT-07</td><td>€4,500–7,000</td><td>2018–2024</td><td>0–30,000</td><td>Porto</td>
+              <td><span class="src-pill">Standvirtual</span><span class="src-pill">OLX</span><span class="src-pill">+3</span></td>
+              <td>2 hours ago</td>
+              <td class="actions"><a href="#">Run now</a><a href="#">Edit</a><a href="#">Delete</a></td>
+            </tr>
+            <tr>
+              <td>Honda</td><td>CB500F</td><td>—</td><td>—</td><td>—</td><td>Nationwide</td>
+              <td><span class="src-pill">All 5</span></td>
+              <td>Never run</td>
+              <td class="actions"><span class="run-pill">▶ Run now</span> <a href="#">Edit</a><a href="#">Delete</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>What this costs — and what it doesn't, anymore</h3>
+      <p>A static GitHub Pages site can't accept form input or persist your watches — it only serves files. A real UI still needs a small backend with a database behind it. But dropping the daily auto-run removes the part that made hosting tricky:</p>
+      <ul class="tight">
+        <li><strong>Backend:</strong> a small API (FastAPI) storing watches, listings, and scores in SQLite/Postgres</li>
+        <li><strong>Frontend:</strong> the form and table above, served by that same app — no separate service to keep in sync</li>
+        <li><strong>Scraping:</strong> runs only when you click <strong>Run now</strong> — no scheduler, no cron, no need for anything to fire reliably while you're not looking</li>
+        <li><strong>No GitHub Pages, no GitHub Actions</strong> required at all — the dashboard lives inside the app you already opened to click "Run now"</li>
+      </ul>
+      <p>This directly answers the open question from the last round: a free-tier host "sleeping" after inactivity used to be a real problem for an unattended daily job — now it's just a few extra seconds the first time you open the app that day.</p>
+    </section>
+
+    <section id="filters">
+      <h2><span class="num">§2</span> Filters</h2>
+      <p class="dek">Every watch is defined by these fields, all optional except brand and model:</p>
+      <ul class="tight">
+        <li><strong>Brand</strong> — e.g. Yamaha</li>
+        <li><strong>Model</strong> — e.g. MT-07</li>
+        <li><strong>Price</strong> — min / max, in €</li>
+        <li><strong>Year</strong> — min / max</li>
+        <li><strong>Km</strong> — min / max</li>
+        <li><strong>Location</strong> — optional; unset searches nationwide</li>
+      </ul>
+      <p>Listings that fail a filter are still stored in the background — they remain useful market context for scoring the ones that pass, but won't clutter your view of active matches.</p>
+    </section>
+
+    <section id="sources">
+      <h2><span class="num">§3</span> Sources — Portugal</h2>
+      <p class="dek">Each marketplace gets its own scraper behind one common interface: <code>fetch(filters) → list[Listing]</code>. A new source is an isolated addition, not a rewrite.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="tag">Primary</div>
+          <div class="name">Standvirtual.pt</div>
+          <p class="note">Largest PT marketplace. Listing data is often embedded as structured JSON — more reliable to parse than raw HTML.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Primary</div>
+          <div class="name">OLX.pt</div>
+          <p class="note">Large general classifieds site with strong motorcycle presence.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Secondary</div>
+          <div class="name">CustoJusto.pt</div>
+          <p class="note">Smaller reach, but occasionally surfaces listings the other two miss.</p>
+        </div>
+        <div class="card">
+          <div class="tag">Secondary</div>
+          <div class="name">Auto.pt</div>
+          <p class="note">Adding as requested. To confirm during build: its motorcycle ("motos") catalog coverage looks thinner than cars — will verify listing volume before relying on it.</p>
+        </div>
+        <div class="card risk">
+          <div class="tag warn">Best-effort</div>
+          <div class="name">Facebook Marketplace</div>
+          <p class="note">Real caveat: FB has no public search API, requires a logged-in session, aggressively blocks automated access, and its ToS prohibits scraping. Feasible as an opt-in, low-frequency, best-effort source using your own session — but expect it to break more often than the others, and there's a small risk of the account being flagged. Recommend shipping without it first, adding it later if the other four aren't enough.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2><span class="num">§4</span> Architecture</h2>
+      <p class="dek">One pipeline, triggered by you clicking "Run now" — no background schedule.</p>
+      <div class="pipeline">
+        <div class="stage"><div class="t">Web UI</div><div class="d">add / edit watches, click Run</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">API + DB</div><div class="d">watches, listings, scores</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">Scrapers</div><div class="d">5 sites × N watches</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">Scoring</div><div class="d">per-watch percentile</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><div class="t">Dashboard</div><div class="d">same app, live</div></div>
+      </div>
+      <h3>Repository layout</h3>
+      <div class="filetree">moto-hunter/
+  app/
+    api/                        <span class="comment"># FastAPI routes: watches CRUD, POST /watches/{id}/run, listings, scores</span>
+    scrapers/
+      base.py                   <span class="comment"># common interface: fetch(filters) -> list[Listing]</span>
+      standvirtual.py
+      olx.py
+      custojusto.py
+      autopt.py
+      facebook.py                <span class="comment"># best-effort, opt-in, off by default</span>
+    models.py                   <span class="comment"># Watch, Listing, PriceHistory</span>
+    db.py                       <span class="comment"># SQLite locally / Postgres in production</span>
+    scoring.py                  <span class="comment"># ranks each active listing vs. its own watch's market</span>
+    notify.py                   <span class="comment"># (future) email/telegram digest</span>
+  web/                          <span class="comment"># the add-watch form + table + dashboard UI</span>
+  requirements.txt</div>
+    </section>
+
+    <section id="data-model">
+      <h2><span class="num">§5</span> Data model</h2>
+      <p class="dek">Two tables now instead of one flat list: what you're watching, and what's been found.</p>
+      <ul class="tight">
+        <li><code>Watch</code> — brand, model, price/year/km min–max, location, active sources, last_run_at</li>
+        <li><code>Listing</code> — <code>watch_id</code>, <code>source</code>, external id, title, price, year, km, location, url, image_url, <code>first_seen</code>, <code>last_seen</code>, <code>is_active</code></li>
+        <li><code>PriceHistory</code> — every price change per listing, timestamped, to catch reductions between runs</li>
+      </ul>
+    </section>
+
+    <section id="scoring">
+      <h2><span class="num">§6</span> Scoring — self-calibrating, no thresholds to tune</h2>
+      <p class="dek">Every listing is ranked only against other active listings <em>for that same watch</em> — an MT-07 is never compared against a CB500F.</p>
+      <ul class="tight">
+        <li>Price percentile within the watch's currently active pool, loosely adjusted for year/km outliers</li>
+        <li>Year and mileage as secondary factors</li>
+        <li>Price-drop detection — a reduced price is a strong signal independent of percentile, visible across runs whenever you trigger them</li>
+      </ul>
+      <div class="buckets">
+        <span class="bucket great">Great deal</span>
+        <span class="bucket good">Good</span>
+        <span class="bucket fair">Fair</span>
+        <span class="bucket over">Overpriced</span>
+      </div>
+      <p>Your filters decide what counts as a <em>match</em>; scoring decides how good each match <em>is</em> — the two operate independently, per watch.</p>
+    </section>
+
+    <section id="hosting">
+      <h2><span class="num">§7</span> Hosting — simpler now</h2>
+      <p class="dek">Manual-only triggering removes the one thing that made free hosting awkward: needing something to run reliably while unattended.</p>
+      <ul class="tight">
+        <li><strong>Render / Fly.io free tier</strong> — runs the FastAPI app, UI, and database together. It may "sleep" after inactivity, but since you're the one opening it to click Run now, a several-second wake-up on the first visit of the day is a non-issue.</li>
+        <li><strong>Oracle Cloud Always Free VM</strong> — genuinely free forever, always on, no sleep at all, but needs a one-time manual server setup (SSH in, install Python, run the app as a service) rather than a git-push-to-deploy flow.</li>
+        <li><strong>No GitHub Pages, no GitHub Actions cron</strong> needed either way — both were only there to serve/wake an unattended daily job that no longer exists.</li>
+        <li>Repo visibility is now a free choice — public or private, your call, since nothing about hosting depends on it.</li>
+      </ul>
+    </section>
+
+    <section id="notifications">
+      <h2><span class="num">§8</span> Notifications</h2>
+      <p class="dek">Still out of scope for v1, by request — the dashboard is the interface for now.</p>
+      <p><code>notify.py</code> stays stubbed into the architecture on purpose, so email (or Telegram, etc.) slots in later without restructuring anything upstream of it.</p>
+    </section>
+
+    <section id="etiquette">
+      <h2><span class="num">§9</span> Scraping etiquette</h2>
+      <p class="dek">Low, predictable load: a handful of searches per watch, only when you trigger a run, with realistic delays and a normal user-agent. Personal-use monitoring of public listing pages, not bulk harvesting — and the one source that carries real ToS risk (Facebook) is opt-in and off by default.</p>
+    </section>
+
+    <section id="setup">
+      <h2><span class="num">§10</span> Remaining setup</h2>
+      <p class="dek">Resolved so far, and what's still open before the first commit.</p>
+      <ul class="decisions">
+        <li><span class="mark">✓</span><span class="txt"><b>Region &amp; sources</b><span>Portugal — Standvirtual, OLX, CustoJusto, Auto.pt, + best-effort Facebook Marketplace</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Filters</b><span>Brand, model, price/year/km min–max, optional location</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Interface</b><span>Real UI (form + watch table), not a hand-edited config file</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Trigger model</b><span>Manual "Run now" only — no daily auto-run, no scheduler</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Notifications</b><span>Skipped for v1 — dashboard only</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>gh auth</b><span>Device flow complete — logged in as alocardoso-CSW</span></span></li>
+        <li><span class="mark">✓</span><span class="txt"><b>Repo name</b><span>moto-hunter, under alocardoso-CSW</span></span></li>
+      </ul>
+      <h3>Still open</h3>
+      <ul class="todo">
+        <li><span class="box"></span><span>Your review of this design — <strong>nothing is being built until you sign off</strong></span></li>
+        <li><span class="box"></span><span>Hosting choice (Render/Fly free tier vs. Oracle Cloud Always Free VM)</span></li>
+        <li><span class="box"></span><span>Repo visibility — public or private, now a free choice</span></li>
+        <li><span class="box"></span><span>Repo <code>moto-hunter</code> has not been created yet</span></li>
+      </ul>
+    </section>
+
+    <footer class="colophon">
+      moto-hunter — internal design plan, rev 0.5. Generated as a working reference; the source of truth for build decisions is the running conversation and <code>DESIGN.md</code> in the project root. Each round of feedback gets its own file in <code>design-history/</code> so earlier revisions stay intact.
+    </footer>
+  </main>
+</div>
