@@ -95,17 +95,19 @@ Only after all four does a checkpoint get marked ready for your review.
 
 ---
 
-## Checkpoint 4 — Scoring engine
+## Checkpoint 4 — Scoring engine ✅ done
 
 **Goal:** turn a pool of listings for a watch into percentile-based scores and buckets (Great / Good / Fair / Overpriced).
 
-- [ ] Price percentile within a watch's active pool, adjusted for year/km outliers
-- [ ] Price-drop detection from `PriceHistory`
-- [ ] Bucket assignment
+- [x] Price percentile within a watch's active pool, adjusted for year/km via least-squares regression (`app/scoring.py`)
+- [x] Price-drop detection from `PriceHistory` — bumps a listing's bucket up one level
+- [x] Bucket assignment
 
 **Verify:**
-- Unit tests with synthetic listing sets with known distributions (e.g. a deliberately cheap outlier should land in "Great deal")
-- Run scoring against the real data pulled in Checkpoints 2–3 and spot-check a handful of listings against your own judgment of whether they're actually good deals
+- [x] Unit tests with synthetic listing sets with known distributions — 6 tests, including a cheap outlier landing in "great," a price drop bumping a bucket, and a same-priced newer/lower-km bike correctly outranking an older/high-km one
+- [x] Ran scoring against real data pulled live from all three scrapers (57 real Yamaha MT-07 listings) and spot-checked the output by eye
+
+**What this checkpoint actually caught:** the first version of the regression fallback mixed scales — a listing missing `km` (every CustoJusto listing) fell back to being ranked by raw price directly, while everything else was ranked by *residual from an expected price* (a difference of tens-to-hundreds of euros, not thousands). That silently dumped every CustoJusto listing into "overpriced" regardless of whether it was actually a good deal. Only caught by actually looking at real scored output, not by the synthetic unit tests — fixed by predicting an expected price for every listing via the best available model (year+km, falling back to year-only, falling back to the pool's median price), so everything is ranked on the same footing.
 
 **Checkpoint gate:** scoring is the part that's hardest to unit-test into correctness — needs your eyes on real output.
 

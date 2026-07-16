@@ -1,21 +1,4 @@
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from app import crud
-from app.models import Base
-
-
-@pytest.fixture
-def session():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    TestSession = sessionmaker(bind=engine, expire_on_commit=False)
-    db = TestSession()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def test_create_and_get_watch_uses_default_sources(session):
@@ -25,7 +8,7 @@ def test_create_and_get_watch_uses_default_sources(session):
     fetched = crud.get_watch(session, watch.id)
     assert fetched.brand == "Yamaha"
     assert fetched.model == "MT-07"
-    assert fetched.sources == ["standvirtual", "olx", "custojusto", "autopt"]
+    assert fetched.sources == ["standvirtual", "olx", "custojusto"]
 
 
 def test_update_and_delete_watch(session):

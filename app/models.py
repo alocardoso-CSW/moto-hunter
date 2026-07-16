@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-DEFAULT_SOURCES = ["standvirtual", "olx", "custojusto", "autopt"]
+DEFAULT_SOURCES = ["standvirtual", "olx", "custojusto"]
 
 
 def utcnow() -> datetime:

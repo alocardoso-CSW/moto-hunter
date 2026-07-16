@@ -144,4 +144,49 @@ Tests prove the code works in theory. This section lets you see it work with you
 
 ---
 
-*(Checkpoint 4 onward will get their own section here as we build them.)*
+## Checkpoint 4 — scoring turns listings into Great/Good/Fair/Overpriced
+
+1. **Run the tests** (now 29 total, 6 new ones for scoring):
+   ```
+   .\.venv\Scripts\python.exe -m pytest -v
+   ```
+   `tests/test_scoring.py` uses synthetic listings with known, deliberately constructed distributions — e.g. two listings priced identically where one is newer/lower-km, and asserts the newer one scores as the better value.
+
+2. **See it score real, live listings from all three sites at once:**
+   ```
+   .\.venv\Scripts\python.exe
+   ```
+   ```python
+   from sqlalchemy import create_engine
+   from sqlalchemy.orm import sessionmaker
+   from app import crud
+   from app.models import Base
+   from app.scrapers.base import WatchFilters
+   from app.scrapers.standvirtual import StandvirtualScraper
+   from app.scrapers.olx import OlxScraper
+   from app.scrapers.custojusto import CustoJustoScraper
+   from app.scoring import score_listings
+
+   engine = create_engine("sqlite:///:memory:")
+   Base.metadata.create_all(engine)
+   session = sessionmaker(bind=engine, expire_on_commit=False)()
+   watch = crud.create_watch(session, brand="Yamaha", model="MT-07")
+   filters = WatchFilters(brand="Yamaha", model="MT-07", price_min=4500, price_max=7500, year_min=2018, year_max=2024, km_min=0, km_max=30000)
+
+   for scraper in [StandvirtualScraper(), OlxScraper(), CustoJustoScraper()]:
+       for item in scraper.fetch(filters):
+           crud.upsert_listing(session, watch.id, source=item.source, external_id=item.external_id, title=item.title, price=item.price, url=item.url, year=item.year, km=item.km)
+
+   listings = crud.get_listings_for_watch(session, watch.id)
+   scores = score_listings(listings)
+   ranked = sorted(listings, key=lambda listing: scores[listing.id].percentile)
+   for listing in ranked:
+       print(scores[listing.id].bucket, listing.price, listing.year, listing.km, listing.title)
+   ```
+   Read through the printed list top to bottom — the "great" listings at the top should look like real bargains for their year/km to your own eye, and "overpriced" at the bottom should look like the worst-value listings, not necessarily the most expensive ones.
+
+3. **A real bug this checkpoint's spot-check caught, that the unit tests didn't:** the first version of the scoring code compared listings inconsistently — a listing missing `km` (true of every CustoJusto listing, which never exposes a structured mileage field) fell back to being ranked by its raw price in euros, while every other listing was ranked by *how far its price was from what's expected for its year/km* (a much smaller number). That silently sorted all CustoJusto listings to the bottom regardless of whether they were actually good deals. Only visible by looking at real output — fixed so every listing gets an expected-price estimate from the best model available (year+km, or year alone, or the pool's median price as a last resort) before ranking.
+
+---
+
+*(Checkpoint 5 onward will get their own section here as we build them.)*
