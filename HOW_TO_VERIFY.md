@@ -112,4 +112,36 @@ Tests prove the code works in theory. This section lets you see it work with you
 
 ---
 
-*(Checkpoint 3 onward will get their own section here as we build them.)*
+## Checkpoint 3 — OLX and CustoJusto, plus why Auto.pt isn't here
+
+1. **Run the tests** (now 23 total):
+   ```
+   .\.venv\Scripts\python.exe -m pytest -v
+   ```
+   `tests/test_olx_scraper.py` and `tests/test_custojusto_scraper.py` each replay a real saved search page, same pattern as Standvirtual.
+
+2. **See both fetch real, live listings right now:**
+   ```
+   .\.venv\Scripts\python.exe
+   ```
+   ```python
+   from app.scrapers.base import WatchFilters
+   from app.scrapers.olx import OlxScraper
+   from app.scrapers.custojusto import CustoJustoScraper
+
+   filters = WatchFilters(brand="Yamaha", model="MT-07", price_min=4500, price_max=7000, year_min=2018, year_max=2024, km_min=0, km_max=30000)
+   len(OlxScraper().fetch(filters))
+   len(CustoJustoScraper().fetch(filters))
+   ```
+
+3. **Cross-check against the real sites:** open https://www.olx.pt/carros-motos-e-barcos/motociclos-scooters/q-yamaha-mt-07/ and https://www.custojusto.pt/portugal/veiculos/motos/yamaha/mt-07 in your browser and compare by eye, same as Checkpoint 2.
+
+4. **Two real things this checkpoint caught, if you're curious:**
+   - **OLX has no structured brand/model filter for motorcycles at all** (checked its own ad data — there's no "brand" field, only a "model" field sellers sometimes fill in wrong). So OLX search is free-text, which pulled in a "Yamaha Tracer 7" and a bare "Yamaha XSR" when searching for "yamaha mt-07." The scraper now checks that the listing's title actually contains "mt07" (ignoring punctuation/spacing) before keeping it — you can see this in `tests/test_olx_scraper.py::test_scraper_fetch_filters_out_off_topic_matches_and_dedupes`.
+   - **OLX blocks Python HTTP libraries outright** — not by rate limit, but by TLS fingerprint. `curl` could reach the site, `httpx2` got a 403 on every page including the homepage. Fixed with `curl_cffi`, a library that makes Python's HTTP client present a real browser's TLS handshake. Only the OLX scraper needs this; Standvirtual and CustoJusto are fine with the normal client.
+
+5. **Why there's no `scrapers/autopt.py`:** investigated, then dropped by your call. Its whole motorcycle section is ~120 listings total (checked by paging through until it ran dry), none of which were an MT-07 at the time, and its search form requires a CSRF token tied to a session rather than working off plain URL parameters like the other three sites. You can retrace this yourself: `curl -s -A "Mozilla/5.0" "https://www.auto.pt/motas-usadas?page=6"` still returns listings, `?page=7` returns none.
+
+---
+
+*(Checkpoint 4 onward will get their own section here as we build them.)*

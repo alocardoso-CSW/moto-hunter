@@ -33,10 +33,15 @@ history/market context) but excluded from your digest/dashboard "active matches"
   structured JSON in the page, which is more reliable to parse than raw HTML.
 - **OLX.pt** — large general classifieds site with strong motorcycle presence.
 - **CustoJusto.pt** — smaller, sometimes surfaces listings the others miss.
+- ~~**Auto.pt**~~ — investigated during Checkpoint 3 and dropped: its entire
+  motorcycle catalog is ~120 listings site-wide (0 currently matching an MT-07
+  search), and its search form is CSRF/session-protected rather than plain
+  URL filters like the other three. Not worth the added complexity for that
+  little coverage.
 
 Each site gets its own scraper module behind a common interface
-(`fetch(query) -> list[Listing]`), so adding a 4th site later is a small, isolated
-addition.
+(`fetch(filters) -> list[ScrapedListing]`), so adding another site later is a
+small, isolated addition.
 
 ## Architecture
 

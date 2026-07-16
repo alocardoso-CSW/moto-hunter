@@ -79,18 +79,19 @@ Only after all four does a checkpoint get marked ready for your review.
 
 ---
 
-## Checkpoint 3 — Remaining core scrapers: OLX, CustoJusto, Auto.pt
+## Checkpoint 3 — Remaining core scrapers: OLX, CustoJusto, (Auto.pt dropped) ✅ done
 
 **Goal:** repeat the proven Checkpoint 2 pattern across the rest of the always-on sources.
 
-- [ ] `scrapers/olx.py`, `scrapers/custojusto.py`, `scrapers/autopt.py`
-- [ ] Confirm during build whether Auto.pt's motorcycle ("motos") catalog has enough volume to be worth keeping (flagged as a risk in the design doc)
+- [x] `scrapers/olx.py` — no structured brand/model filter exists for motorcycles on OLX, so brand+model become free-text search, with a client-side title-match filter to drop off-topic results (confirmed real case: a "Yamaha Tracer 7" and a bare "Yamaha XSR" both surfaced in an MT-07 search). Price/year/km filters do work as structured query params. Also hit OLX's bot protection blocking plain Python HTTP clients by TLS fingerprint (curl worked, httpx2 got 403 even on the homepage) — fixed with `curl_cffi`, which impersonates a real browser's TLS handshake.
+- [x] `scrapers/custojusto.py` — the brand/model URL path works, but its "structure" query param (price/year/km/text filters) is silently ignored over plain GET, confirmed by testing several encodings. Since per-model result counts are small, those filters are applied client-side instead. This category also mixes in spare parts/accessories tagged with a matching brand+model (a shock absorber "for a MT-07," a windshield) with no structured field to tell them apart from an actual bike — filtered via a price-plausibility floor plus the same title-match approach used for OLX.
+- [x] `scrapers/autopt.py` — **dropped**, by your decision. Investigated first: its entire motorcycle catalog is ~120 listings site-wide (0 currently matching an MT-07 search), and its search form is CSRF/session-protected rather than plain URL filters like the other three sites. Not worth the added complexity for that little coverage.
 
 **Verify:**
-- Fixture-based unit tests per site, same pattern as Checkpoint 2
-- Live manual run per site, spot-checked against the real search results
+- [x] Fixture-based unit tests per site, same pattern as Checkpoint 2 — 23 tests total, all passing
+- [x] Live manual run per site using the actual production scraper classes, spot-checked against the real search results
 
-**Checkpoint gate:** confirm all four sources return sane, comparable data before scoring is built on top of them.
+**Checkpoint gate:** confirm all sources return sane, comparable data before scoring is built on top of them.
 
 ---
 
