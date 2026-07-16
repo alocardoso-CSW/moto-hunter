@@ -80,7 +80,7 @@ Tests prove the code works in theory. This section lets you see it work with you
    crud.list_watches(session)  # your Yamaha MT-07 watch is still there
    ```
 
-5. **(Optional, for later) A friendlier way to browse the database:** everything above happens in a file at `data\moto_hunter.db`. There's no lightweight command-line SQLite browser installed, so if you'd like a visual way to click through tables instead of typing Python, a free tool called **DB Browser for SQLite** (https://sqlitebrowser.org/) can open that file directly — let me know if you want me to install it.
+5. **A friendlier way to browse the database:** **DB Browser for SQLite** is now installed. Open it from the Start menu (search "DB Browser for SQLite"), then **File → Open Database** and pick `data\moto_hunter.db` inside the project folder. Click the **Browse Data** tab and pick a table (`watches`, `listings`, `price_history`) from the dropdown to see the actual rows — no Python needed. This is the easiest way to eyeball what a checkpoint produced from here on.
 
 ---
 
