@@ -4,7 +4,7 @@ import re
 import httpx2
 from bs4 import BeautifulSoup
 
-from app.scrapers.base import ScrapedListing, Scraper, WatchFilters
+from app.scrapers.base import ScrapedListing, Scraper, WatchFilters, matches_location
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -113,14 +113,6 @@ def parse_search_html(html: str) -> list[ScrapedListing]:
     return [_parse_listing(edge["node"]) for edge in advert_search.get("edges", [])]
 
 
-def _matches_location(listing: ScrapedListing, filters: WatchFilters) -> bool:
-    if not filters.location:
-        return True
-    if not listing.location:
-        return False
-    return filters.location.strip().lower() in listing.location.lower()
-
-
 class StandvirtualScraper(Scraper):
     source_name = "standvirtual"
 
@@ -135,4 +127,4 @@ class StandvirtualScraper(Scraper):
         )
         response.raise_for_status()
         listings = parse_search_html(response.text)
-        return [listing for listing in listings if _matches_location(listing, filters)]
+        return [listing for listing in listings if matches_location(listing, filters)]

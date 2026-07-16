@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 
 
@@ -41,3 +42,20 @@ class Scraper:
 
     def fetch(self, filters: WatchFilters) -> list[ScrapedListing]:
         raise NotImplementedError
+
+
+def normalize_text(value: str) -> str:
+    """Strips everything but letters/digits and lowercases, so "MT-07" and
+    "mt 07" and "Mt.07" all compare equal."""
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def matches_location(listing: ScrapedListing, filters: WatchFilters) -> bool:
+    """Client-side location filter: substring match against the listing's
+    location text. Used instead of a site's own location filter, which
+    would require a name-to-internal-ID lookup table per site."""
+    if not filters.location:
+        return True
+    if not listing.location:
+        return False
+    return filters.location.strip().lower() in listing.location.lower()
