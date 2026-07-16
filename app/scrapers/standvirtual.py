@@ -1,7 +1,7 @@
 import json
 import re
 
-import httpx
+import httpx2
 from bs4 import BeautifulSoup
 
 from app.scrapers.base import ScrapedListing, Scraper, WatchFilters
@@ -126,7 +126,7 @@ class StandvirtualScraper(Scraper):
 
     def fetch(self, filters: WatchFilters) -> list[ScrapedListing]:
         url, params = build_search_url(filters)
-        response = httpx.get(
+        response = httpx2.get(
             url,
             params=params,
             headers={"User-Agent": USER_AGENT},
