@@ -25,36 +25,36 @@ Only after all four does a checkpoint get marked ready for your review.
 
 ---
 
-## Checkpoint 0 — Repo & environment scaffolding
+## Checkpoint 0 — Repo & environment scaffolding ✅ done
 
 **Goal:** an empty but runnable skeleton, nothing functional yet.
 
-- [ ] Create the `moto-hunter` GitHub repo (visibility per your call — still open from the design doc)
-- [ ] Project structure: `app/`, `web/`, `tests/`, `requirements.txt`, `.gitignore`, `README.md`
-- [ ] Python virtual environment + base dependencies (FastAPI, uvicorn, SQLAlchemy, httpx, BeautifulSoup4, pytest, ruff)
-- [ ] Minimal FastAPI app with a `/health` endpoint
-- [ ] First commit pushed
+- [x] Create the `moto-hunter` GitHub repo — public, https://github.com/alocardoso-CSW/moto-hunter
+- [x] Project structure: `app/`, `web/`, `tests/`, `requirements.txt`, `.gitignore`, `README.md`
+- [x] Python virtual environment + base dependencies (FastAPI, uvicorn, SQLAlchemy, httpx, BeautifulSoup4, pytest, ruff)
+- [x] Minimal FastAPI app with a `/health` endpoint
+- [x] First commit pushed
 
 **Verify:**
-- `uvicorn app.main:app` boots locally and `/health` returns `200 OK`
-- `pytest` runs cleanly (even with zero tests collected — proves the harness works)
-- `ruff check .` runs clean
+- [x] `uvicorn app.main:app` boots locally and `/health` returns `200 OK`
+- [x] `pytest` runs cleanly (even with zero tests collected — proves the harness works)
+- [x] `ruff check .` runs clean
 
-**Checkpoint gate:** confirm repo structure and that the app boots before any real logic gets written.
+**Checkpoint gate:** confirm repo structure and that the app boots before any real logic gets written. — confirmed by user.
 
 ---
 
-## Checkpoint 1 — Data model & database layer
+## Checkpoint 1 — Data model & database layer ✅ done
 
 **Goal:** `Watch`, `Listing`, `PriceHistory` tables, with working CRUD, no scraping yet.
 
-- [ ] SQLAlchemy models: `Watch` (brand, model, price/year/km min–max, location, enabled sources, last_run_at), `Listing`, `PriceHistory`
-- [ ] DB init (SQLite file under `data/`)
-- [ ] CRUD functions: create/update/delete a watch, upsert a listing, append price history on change
+- [x] SQLAlchemy models: `Watch` (brand, model, price/year/km min–max, location, enabled sources, last_run_at), `Listing`, `PriceHistory`
+- [x] DB init (SQLite file under `data/`)
+- [x] CRUD functions: create/update/delete a watch, upsert a listing (with price-history tracking), mark listings inactive after a run
 
 **Verify:**
-- Unit tests against an in-memory SQLite DB: create a watch, upsert a listing twice with a price change, confirm `PriceHistory` records the change
-- Manually inspect the generated `.db` file with the `sqlite3` CLI to confirm the schema looks right
+- [x] Unit tests against an in-memory SQLite DB: create a watch, upsert a listing twice with a price change, confirm `PriceHistory` records the change (9 tests, all passing)
+- [x] Manually inspected the generated `.db` file (via Python's built-in `sqlite3` module — no standalone CLI installed) to confirm the schema matches the design
 
 **Checkpoint gate:** review the schema itself — easier to adjust field names/types now than after scrapers depend on them.
 

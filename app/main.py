@@ -1,6 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-app = FastAPI(title="moto-hunter")
+from app.db import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="moto-hunter", lifespan=lifespan)
 
 
 @app.get("/health")
