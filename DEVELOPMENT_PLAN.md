@@ -60,16 +60,20 @@ Only after all four does a checkpoint get marked ready for your review.
 
 ---
 
-## Checkpoint 2 — First scraper: Standvirtual (proof of concept)
+## Checkpoint 2 — First scraper: Standvirtual (proof of concept) ✅ done
 
 **Goal:** prove the scraping approach works end-to-end on one site before repeating it four more times.
 
-- [ ] `scrapers/base.py` — common interface: `fetch(filters) -> list[Listing]`
-- [ ] `scrapers/standvirtual.py` — search by brand/model, parse the embedded JSON, map to `Listing`, apply price/year/km/location filters
+- [x] `scrapers/base.py` — common interface: `fetch(filters) -> list[ScrapedListing]`
+- [x] `scrapers/standvirtual.py` — search by brand/model, parse the embedded JSON, map to `ScrapedListing`, apply price/year/km/location filters
 
 **Verify:**
-- Unit tests against a saved fixture (a real captured search-results page), so tests don't depend on the live site or network
-- One **live** manual run against real Standvirtual search results for "Yamaha MT-07" — I'll show you the actual scraped output side-by-side with the real site so you can sanity-check field mapping (price, year, km, url) before the pattern gets copied to other sites
+- [x] Unit tests against a saved fixture (a real captured search-results page for Yamaha MT-07), so tests don't depend on the live site or network — 5 new tests, 14 total, all passing
+- [x] One **live** manual run against real Standvirtual search results for "Yamaha MT-07", using the actual production scraper class — 11 real listings fetched live, matching the fixture
+
+**What this checkpoint actually caught:** while reverse-engineering the site's filter parameters, `search[filter_float_year:from/to]` looked plausible but silently did nothing — years outside the requested range kept appearing. The real parameter is `search[filter_float_first_registration_year:from/to]`, confirmed by testing against the live site until results actually matched the filter. Exactly the kind of subtle, wrong-but-plausible bug this checkpoint exists to catch before it's copied into 4 more scrapers.
+
+**Known simplification:** the `location` filter is applied client-side (substring match against the listing's city/region text) rather than via the site's own filter, since that would require a name-to-internal-ID lookup table. Documented in code; revisit if it proves too loose in practice.
 
 **Checkpoint gate:** this is the most important gate in the whole plan — if the scraping approach or data mapping is wrong, better to catch it on one site than fix it in five.
 

@@ -8,3 +8,4 @@ data/*.db
 .pytest_cache/
 *.egg-info/
 .claude/
+scratch/

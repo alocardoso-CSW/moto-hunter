@@ -84,4 +84,32 @@ Tests prove the code works in theory. This section lets you see it work with you
 
 ---
 
-*(Checkpoint 2 onward will get their own section here as we build them.)*
+## Checkpoint 2 — the scraper actually finds real bikes
+
+1. **Run the tests** (now 14 total, 5 new ones for the scraper):
+   ```
+   .\.venv\Scripts\python.exe -m pytest -v
+   ```
+   The new tests in `tests/test_standvirtual_scraper.py` replay a real, saved Standvirtual search page (`tests/fixtures/standvirtual_mt07_search.html`) rather than hitting the internet, so they stay fast and reliable.
+
+2. **See it fetch real, live listings right now** — open a Python session:
+   ```
+   .\.venv\Scripts\python.exe
+   ```
+   ```python
+   from app.scrapers.base import WatchFilters
+   from app.scrapers.standvirtual import StandvirtualScraper
+
+   filters = WatchFilters(brand="Yamaha", model="MT-07", price_min=4500, price_max=7000, year_min=2018, year_max=2024, km_min=0, km_max=30000)
+   listings = StandvirtualScraper().fetch(filters)
+   len(listings)  # however many match right now
+   listings[0]
+   ```
+
+3. **Cross-check against the real site with your own eyes:** open https://www.standvirtual.com/motos/yamaha/mt-07 in your browser, and manually set the same filters (price 4500–7000€, year 2018–2024, km 0–30000) using the site's own filter panel. The listings you see there should be the same ones (or a close, current match — listings change over time) as what `listings` printed above. This is the real check: not "did the code run," but "does it agree with the actual website."
+
+4. **A bug this checkpoint actually caught, if you're curious:** Standvirtual's year filter parameter isn't the one you'd guess from a URL scan (`filter_float_year`) — it silently does nothing. The working one, found by testing until results actually matched, is `filter_float_first_registration_year`. Worth knowing in case a future checkpoint needs to touch this scraper again.
+
+---
+
+*(Checkpoint 3 onward will get their own section here as we build them.)*
